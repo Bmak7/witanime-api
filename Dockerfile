@@ -1,9 +1,8 @@
 FROM python:3.10-slim
 
-# Prevent interactive prompts during install
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies (needed for Chrome + Selenium)
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget curl gnupg unzip ca-certificates \
     fonts-liberation libasound2 libatk-bridge2.0-0 libatk1.0-0 \
@@ -12,20 +11,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxshmfence1 xvfb \
  && rm -rf /var/lib/apt/lists/*
 
-# Install Google Chrome (stable)
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
- && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" \
+# Google Chrome (using keyrings, not apt-key)
+RUN mkdir -p /usr/share/keyrings \
+ && curl -fsSL https://dl.google.com/linux/linux_signing_key.pub \
+    | gpg --dearmor -o /usr/share/keyrings/google-linux-signing-keyring.gpg \
+ && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
     > /etc/apt/sources.list.d/google-chrome.list \
  && apt-get update && apt-get install -y --no-install-recommends google-chrome-stable \
  && rm -rf /var/lib/apt/lists/*
 
-# Setup app
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Expose Flask port
 EXPOSE 5000
 CMD ["python", "server.py"]
