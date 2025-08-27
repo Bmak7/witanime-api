@@ -11,18 +11,20 @@ app = Flask(__name__)
 
 def fetch_video_list_witanime(episode_url):
     video_list = []
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless=new')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('log-level=3')
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.options import Options
 
-    service = ChromeService(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    options = Options()
+    options.binary_location = "/usr/bin/google-chrome"
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    driver = webdriver.Chrome(service=Service(), options=options)
 
     try:
         driver.get(episode_url)
-        wait = WebDriverWait(driver, 15)
+        wait = WebDriverWait(driver, 20)
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul#episode-servers a.server-link")))
         servers = driver.find_elements(By.CSS_SELECTOR, "ul#episode-servers a.server-link")
 
@@ -39,12 +41,14 @@ def fetch_video_list_witanime(episode_url):
                 url = iframe_el.get_attribute("src")
                 if url:
                     video_list.append({"server": name, "url": url})
-            except Exception:
+            except Exception as e:
+                print("Server failed:", e)
                 continue
     finally:
         driver.quit()
 
     return video_list
+
 
 @app.route("/get_servers", methods=["GET"])
 def get_servers():
